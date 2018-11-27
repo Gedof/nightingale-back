@@ -1,0 +1,108 @@
+Usuario json
+    username        Text
+    password        Text
+    nome            Text
+    cpf             Text
+    rg              Text
+    nasc            Day
+    tipo            Text
+    telefone        Text Maybe
+    celular         Text Maybe
+    email           Text
+    pais            Text
+    cep             Text
+    estado          Text
+    cidade          Text
+    bairro          Text
+    logradouro      Text
+    numero          Text
+    complemento     Text Maybe
+    insertedTimestamp       UTCTime
+    lastUpdatedTimestamp    UTCTime
+    UniqueUserCpf cpf
+    UniqueUserUsername username
+    UniqueEmail email
+    deriving Show
+    
+Medico json
+    userid      UsuarioId
+    crm         Text
+    ativo       Bool
+    UniqueUserId userid
+    deriving Show
+
+    
+Paciente json
+    nome            Text
+    cpf             Text
+    rg              Text
+    nasc            Day
+    telefone        Text Maybe
+    celular         Text Maybe
+    email           Text
+    pais            Text
+    cep             Text
+    estado          Text
+    cidade          Text
+    bairro          Text
+    logradouro      Text
+    numero          Text
+    complemento     Text Maybe
+    insertedTimestamp       UTCTime
+    lastUpdatedTimestamp    UTCTime
+    UniquePacCpf cpf
+    deriving Show
+    
+Especializacao json
+    nome        Text
+    timestamp       UTCTime
+    deriving Show
+    
+EspecMedico json
+    medicoid    MedicoId
+    especid     EspecializacaoId
+    timestamp   UTCTime
+    UniqueEspec medicoid especid
+    deriving Show
+    
+Consulta json
+    pacienteid      PacienteId
+    medicoid        MedicoId
+    especid         EspecializacaoId
+    inicio          UTCTime
+    termino         UTCTime
+    observacoes     Text
+    insertedTimestamp       UTCTime
+    lastUpdatedTimestamp    UTCTime
+    deriving Show
+    
+EntradaProntuario json
+    pacienteid      PacienteId
+    medicoid        MedicoId
+    especid         EspecializacaoId Maybe
+    conteudo        Text
+    timestamp       UTCTime
+    deriving Show
+
+    
+--https://stackoverflow.com/questions/39815742/haskell-how-to-add-minutes-to-current-time-using-data-time
+
+
+
+--User
+--    ident Text
+--    password Text Maybe
+--    UniqueUser ident
+--    deriving Typeable
+--Email
+--    email Text
+--    userId UserId Maybe
+--    verkey Text Maybe
+--    UniqueEmail email
+--Comment json -- Adding "json" causes ToJSON and FromJSON instances to be derived.
+--    message Text
+--    userId UserId Maybe
+--   deriving Eq
+--    deriving Show
+
+ -- By default this file is used in Model.hs (which is imported by Foundation.hs)

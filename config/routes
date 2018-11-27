@@ -1,0 +1,72 @@
+/static StaticR Static appStatic
+
+/favicon.ico FaviconR GET
+/robots.txt RobotsR GET
+
+/ HomeR GET
+
+
+/paciente       PacienteR       POST OPTIONS
+/paciente/list  ListPacienteR   GET OPTIONS
+
+/paciente/#PacienteId/id        SinglePacienteR     GET OPTIONS
+/paciente/#PacienteId/apagar    ApagarPacienteR     DELETE OPTIONS
+/paciente/#PacienteId/alterar   AlterarPacienteR    PUT OPTIONS
+
+
+
+/funcionario        FuncionarioR        POST OPTIONS
+/funcionario/list   ListFuncionarioR    GET OPTIONS
+
+/funcionario/#UsuarioId/id      SingleFuncionarioR  GET OPTIONS
+/funcionario/#UsuarioId/apagar  ApagarFuncionarioR  DELETE OPTIONS
+/funcionario/#UsuarioId/alterar AlterarFuncionarioR PUT OPTIONS
+
+
+
+/medico         MedicoR         POST OPTIONS
+/medico/list    ListMedicoR     GET OPTIONS
+
+/medico/#MedicoId/id        SingleMedicoR       GET OPTIONS
+/medico/#MedicoId/alterar   AlterarMedicoR      PUT OPTIONS
+/medico/#MedicoId/desativar DesativarMedicoR    PATCH OPTIONS
+/medico/#MedicoId/ativar    AtivarMedicoR       PATCH OPTIONS
+
+
+
+/consulta         ConsultaR         POST OPTIONS
+/consulta/list    ListConsultaR     GET OPTIONS
+
+/consulta/#ConsultaId/id        SingleConsultaR     GET OPTIONS
+/consulta/#MedicoId/medico      MedConsultaR        GET OPTIONS
+/consulta/#ConsultaId/apagar    ApagarConsultaR     DELETE OPTIONS
+/consulta/#ConsultaId/alterar   AlterarConsultaR    PUT OPTIONS
+
+
+
+/prontuario         ProntuarioR         POST OPTIONS
+/prontuario/list    ListProntuarioR     GET OPTIONS
+
+/prontuario/#EntradaProntuarioId/id     SingleProntuarioR   GET OPTIONS
+/prontuario/#PacienteId/paciente        PacProntuarioR      GET OPTIONS
+/prontuario/#EntradaProntuarioId/apagar ApagarProntuarioR   DELETE OPTIONS
+
+
+
+/especs         EspecR      POST
+/espec/list     ListEspecR  GET OPTIONS
+
+/espec/#EspecializacaoId/id     SingleEspecializacaoR   GET OPTIONS
+
+
+
+/login  LoginR   GET POST
+
+/resetarsenha/#Text/usuario     RedefinirSenhaR     PATCH OPTIONS
+/alterarsenha                   AlterarSenhaR       PATCH OPTIONS
+
+
+
+
+
+/email  EmailR  GET
