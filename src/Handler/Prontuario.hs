@@ -62,7 +62,7 @@ postProntuarioR = do
     case mjwtInfo of
         Just jwtInfo -> do
             case (jwjCargo jwtInfo) of
-                3 -> do
+                x | elem x [3] -> do
                     isValid <- validatePront prontjson
                     emedico <- runDB $ getBy404 $ UniqueUserId $ jwjId jwtInfo
                     medid <- return $ entityKey emedico
@@ -73,8 +73,8 @@ postProntuarioR = do
                         prontuario <- liftIO $ cleanPront medid prontjson
                         prontid <- runDB $ insert prontuario
                         sendStatusJSON created201 (object ["resp" .= prontid])
-                _ -> sendStatusJSON forbidden403 (object [])
-        Nothing -> sendStatusJSON unauthorized401 (object ["bearer" .= mbearer])
+                _ -> sendStatusJSON forbidden403 (object ["resp" .= (1::Int)])
+        Nothing -> sendStatusJSON unauthorized401 (object ["resp" .= (1::Int)])
     where
         invalido = "Invalido" :: Text
         
@@ -119,11 +119,19 @@ getSingleProntuarioR :: EntradaProntuarioId -> Handler TypedContent
 getSingleProntuarioR prontuarioid = do
     addHeader "ACCESS-CONTROL-ALLOW-ORIGIN" "*"
     addHeader "ACCESS-CONTROL-ALLOW-HEADERS" "AUTHORIZATION"
-    bearer <- lookupBearerAuth
-    prontuario <- runDB $ get404 prontuarioid
-    --medico <- runDB $ get404 (entradaProntuarioMedicoid prontuario)
-    prontjson <- return $ createPront prontuarioid prontuario
-    sendStatusJSON ok200 (object ["resp" .= prontjson])
+    mbearer <- lookupBearerAuth
+    mjwtInfo <- liftIO $ jwtAll mbearer
+    case mjwtInfo of
+        Just jwtInfo -> do
+            case (jwjCargo jwtInfo) of
+                x | elem x [3] -> do
+                    prontuario <- runDB $ get404 prontuarioid
+                    --medico <- runDB $ get404 (entradaProntuarioMedicoid prontuario)
+                    prontjson <- return $ createPront prontuarioid prontuario
+                    sendStatusJSON ok200 (object ["resp" .= prontjson])
+                _ -> sendStatusJSON forbidden403 (object ["resp" .= (1::Int)])
+        Nothing -> sendStatusJSON unauthorized401 (object ["resp" .= (1::Int)])
+    
     
 createPront :: EntradaProntuarioId -> EntradaProntuario -> ProntResJSON
 createPront prontuarioid prontuario = 
@@ -146,10 +154,17 @@ getListProntuarioR :: Handler TypedContent
 getListProntuarioR = do
     addHeader "ACCESS-CONTROL-ALLOW-ORIGIN" "*"
     addHeader "ACCESS-CONTROL-ALLOW-HEADERS" "AUTHORIZATION"
-    bearer <- lookupBearerAuth
-    eprontuarios <- runDB $ selectList [] [Asc EntradaProntuarioId]
-    prontjsons <- forM eprontuarios createPronts
-    sendStatusJSON created201 (object ["resp" .= prontjsons])
+    mbearer <- lookupBearerAuth
+    mjwtInfo <- liftIO $ jwtAll mbearer
+    case mjwtInfo of
+        Just jwtInfo -> do
+            case (jwjCargo jwtInfo) of
+                x | elem x [3] -> do
+                    eprontuarios <- runDB $ selectList [] [Asc EntradaProntuarioId]
+                    prontjsons <- forM eprontuarios createPronts
+                    sendStatusJSON created201 (object ["resp" .= prontjsons])
+                _ -> sendStatusJSON forbidden403 (object ["resp" .= (1::Int)])
+        Nothing -> sendStatusJSON unauthorized401 (object ["resp" .= (1::Int)])
     
     
 createPronts :: Entity EntradaProntuario -> Handler ProntResJSON
@@ -170,10 +185,18 @@ getPacProntuarioR :: PacienteId -> Handler TypedContent
 getPacProntuarioR pacienteid = do
     addHeader "ACCESS-CONTROL-ALLOW-ORIGIN" "*"
     addHeader "ACCESS-CONTROL-ALLOW-HEADERS" "AUTHORIZATION"
-    bearer <- lookupBearerAuth
-    eprontuarios <- runDB $ selectList [EntradaProntuarioPacienteid ==. pacienteid] [Asc EntradaProntuarioId]
-    prontjsons <- forM eprontuarios createPronts
-    sendStatusJSON created201 (object ["resp" .= prontjsons])
+    mbearer <- lookupBearerAuth
+    mjwtInfo <- liftIO $ jwtAll mbearer
+    case mjwtInfo of
+        Just jwtInfo -> do
+            case (jwjCargo jwtInfo) of
+                x | elem x [3] -> do
+                    eprontuarios <- runDB $ selectList [EntradaProntuarioPacienteid ==. pacienteid] [Asc EntradaProntuarioId]
+                    prontjsons <- forM eprontuarios createPronts
+                    sendStatusJSON created201 (object ["resp" .= prontjsons])
+                _ -> sendStatusJSON forbidden403 (object ["resp" .= (1::Int)])
+        Nothing -> sendStatusJSON unauthorized401 (object ["resp" .= (1::Int)])
+
     
 --apagar
 
