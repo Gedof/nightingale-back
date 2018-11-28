@@ -58,12 +58,16 @@ validatePac cpf rg = valCpf && valRg
     valCpf = cpfCheck cpf
     valRg = rgCheck rg
 
-validateEnd :: Text -> Text -> Bool
-validateEnd cep estado = valCep && valEst
+validateEnd :: Maybe Text -> Maybe Text -> Bool
+validateEnd mcep mestado = valCep && valEst
     where
     --valPais = paisCheck $ unpack $ pais end
-    valCep = cepCheck cep
-    valEst = estadoCheck estado
+    valCep = case mcep of
+        Just cep -> cepCheck cep
+        Nothing -> True
+    valEst = case mestado of
+        Just estado -> estadoCheck estado
+        Nothing -> True
 
 
 cleanPaciente :: PacReqJSON -> IO Paciente
@@ -77,8 +81,8 @@ cleanPaciente pac = do
         pacienteTelefone    = fmap cleanNumber $ pacreqTelefone pac,
         pacienteCelular     = fmap cleanNumber $ pacreqCelular pac,
         pacienteEmail       = pacreqEmail pac,
-        pacientePais        = "BR",
-        pacienteCep         = cleanNumber $ pacreqCep pac,
+        pacientePais        = Just "BR",
+        pacienteCep         = fmap cleanNumber $ pacreqCep pac,
         pacienteEstado      = pacreqEstado pac,
         pacienteCidade      = pacreqCidade pac,
         pacienteBairro      = pacreqBairro pac,
@@ -225,8 +229,8 @@ cleanAltPaciente pac timestamp = do
         pacienteTelefone    = fmap cleanNumber $ pacreqTelefone pac,
         pacienteCelular     = fmap cleanNumber $ pacreqCelular pac,
         pacienteEmail       = pacreqEmail pac,
-        pacientePais        = "BR",
-        pacienteCep         = cleanNumber $ pacreqCep pac,
+        pacientePais        = Just "BR",
+        pacienteCep         = fmap cleanNumber $ pacreqCep pac,
         pacienteEstado      = pacreqEstado pac,
         pacienteCidade      = pacreqCidade pac,
         pacienteBairro      = pacreqBairro pac,
@@ -258,14 +262,12 @@ getListPacienteR = do
     mNome <- lookupGetParam $ T.pack "nome"
     mRg <- lookupGetParam $ T.pack "rg"
     mCpf <- lookupGetParam $ T.pack "cpf"
-    mEmail <- lookupGetParam $ T.pack "email"
     nomeFilter <- return $ createPacFilterNome mNome
     rgFilter <- return $ createPacFilterRg mRg
     cpfFilter <- return $ createPacFilterCpf mCpf
-    emailFilter <- return $ createPacFilterEmail mEmail
-    epacientes <- runDB $ selectList (concat [nomeFilter, rgFilter, cpfFilter, emailFilter]) [Asc PacienteId]
+    epacientes <- runDB $ selectList (concat [nomeFilter, rgFilter, cpfFilter]) [Asc PacienteId]
     pacientes <- return $ map createPacGetE epacientes
-    sendStatusJSON ok200 (object ["resp" .= pacientes,"params" .= [mNome, mRg, mCpf, mEmail]])
+    sendStatusJSON ok200 (object ["resp" .= pacientes,"params" .= [mNome, mRg, mCpf]])
     
 
 
@@ -285,12 +287,6 @@ createPacFilterCpf :: Maybe Text -> [Filter Paciente]
 createPacFilterCpf mCpf = 
     case mCpf of
         Just cpf -> [Filter PacienteCpf (Left $ concat ["%", cpf, "%"]) (BackendSpecificFilter "ILIKE")]
-        Nothing -> []
-        
-createPacFilterEmail :: Maybe Text -> [Filter Paciente]
-createPacFilterEmail mEmail = 
-    case mEmail of
-        Just email -> [Filter PacienteEmail (Left $ concat ["%", email, "%"]) (BackendSpecificFilter "ILIKE")]
         Nothing -> []
     
 -- funcionarios/list/#pagina?cpf=11111111111&nome=Guilherme&cargo=1
