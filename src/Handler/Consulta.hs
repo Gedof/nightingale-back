@@ -10,6 +10,7 @@ import Import
 import Data.Time
 import Handler.Validation
 import Handler.JSONTypes
+import Handler.Login
 
 
 --POST AGEND
@@ -24,17 +25,24 @@ postConsultaR :: Handler TypedContent
 postConsultaR = do
     addHeader "ACCESS-CONTROL-ALLOW-ORIGIN" "*"
     addHeader "ACCESS-CONTROL-ALLOW-HEADERS" "AUTHORIZATION"
-    bearer <- lookupBearerAuth
+    mbearer <- lookupBearerAuth
     consjson <- requireJsonBody :: Handler ConsReqJSON
     --consjson <- return $ conscadConsulta conscadjson
-    isValid <- validateCons consjson
-    if (not isValid) then
-        sendStatusJSON badRequest400 (object ["resp" .= invalido])
-    else do
-        --medico <- runDB $ getBy404 $ UniqueUserId (consreqMedicoid consjson)
-        consulta <- liftIO $ cleanCons consjson
-        consultaid <- runDB $ insert consulta
-        sendStatusJSON created201 (object ["resp" .= consultaid])
+    mjwtInfo <- liftIO $ jwtAll mbearer
+    case mjwtInfo of
+        Just jwtInfo -> do
+            case (jwjCargo jwtInfo) of
+                x | elem x [1,2,3] -> do
+                    isValid <- validateCons consjson
+                    if (not isValid) then
+                        sendStatusJSON badRequest400 (object ["resp" .= invalido])
+                    else do
+                        --medico <- runDB $ getBy404 $ UniqueUserId (consreqMedicoid consjson)
+                        consulta <- liftIO $ cleanCons consjson
+                        consultaid <- runDB $ insert consulta
+                        sendStatusJSON created201 (object ["resp" .= consultaid])
+                _ -> sendStatusJSON forbidden403 (object ["resp" .= (1::Int)])
+        Nothing -> sendStatusJSON unauthorized401 (object ["resp" .= (1::Int)])
     where
     invalido = "Invalido" :: Text
 
@@ -78,11 +86,19 @@ getSingleConsultaR :: ConsultaId -> Handler TypedContent
 getSingleConsultaR consultaid = do
     addHeader "ACCESS-CONTROL-ALLOW-ORIGIN" "*"
     addHeader "ACCESS-CONTROL-ALLOW-HEADERS" "AUTHORIZATION"
-    bearer <- lookupBearerAuth
-    consulta <- runDB $ get404 consultaid
-    --medico <- runDB $ get404 (consultaMedicoid consulta)
-    consjson <- return $ createCons consultaid consulta
-    sendStatusJSON created201 (object ["resp" .= consjson])
+    mbearer <- lookupBearerAuth
+    mjwtInfo <- liftIO $ jwtAll mbearer
+    case mjwtInfo of
+        Just jwtInfo -> do
+            case (jwjCargo jwtInfo) of
+                x | elem x [1,2,3] -> do
+                    consulta <- runDB $ get404 consultaid
+                    --medico <- runDB $ get404 (consultaMedicoid consulta)
+                    consjson <- return $ createCons consultaid consulta
+                    sendStatusJSON created201 (object ["resp" .= consjson])
+                _ -> sendStatusJSON forbidden403 (object ["resp" .= (1::Int)])
+        Nothing -> sendStatusJSON unauthorized401 (object ["resp" .= (1::Int)])
+    
     
 createCons :: ConsultaId -> Consulta -> ConsResJSON
 createCons consultaid consulta = 
@@ -108,10 +124,18 @@ getListConsultaR :: Handler TypedContent
 getListConsultaR = do
     addHeader "ACCESS-CONTROL-ALLOW-ORIGIN" "*"
     addHeader "ACCESS-CONTROL-ALLOW-HEADERS" "AUTHORIZATION"
-    bearer <- lookupBearerAuth
-    econsultas <- runDB $ selectList [] [Asc ConsultaId]
-    consjsons <- forM econsultas createConss
-    sendStatusJSON ok200 (object ["resp" .= consjsons])
+    mbearer <- lookupBearerAuth
+    mjwtInfo <- liftIO $ jwtAll mbearer
+    case mjwtInfo of
+        Just jwtInfo -> do
+            case (jwjCargo jwtInfo) of
+                x | elem x [1,2,3] -> do
+                    econsultas <- runDB $ selectList [] [Asc ConsultaId]
+                    consjsons <- forM econsultas createConss
+                    sendStatusJSON ok200 (object ["resp" .= consjsons])
+                _ -> sendStatusJSON forbidden403 (object ["resp" .= (1::Int)])
+        Nothing -> sendStatusJSON unauthorized401 (object ["resp" .= (1::Int)])
+    
     
     
 createConss :: Entity Consulta -> Handler ConsResJSON
@@ -133,10 +157,17 @@ getMedConsultaR :: MedicoId -> Handler TypedContent
 getMedConsultaR medicoid = do
     addHeader "ACCESS-CONTROL-ALLOW-ORIGIN" "*"
     addHeader "ACCESS-CONTROL-ALLOW-HEADERS" "AUTHORIZATION"
-    bearer <- lookupBearerAuth
-    econsultas <- runDB $ selectList [ConsultaMedicoid ==. medicoid] [Asc ConsultaId]
-    consjsons <- forM econsultas createConss
-    sendStatusJSON created201 (object ["resp" .= consjsons])
+    mbearer <- lookupBearerAuth
+    mjwtInfo <- liftIO $ jwtAll mbearer
+    case mjwtInfo of
+        Just jwtInfo -> do
+            case (jwjCargo jwtInfo) of
+                x | elem x [1,2,3] -> do
+                    econsultas <- runDB $ selectList [ConsultaMedicoid ==. medicoid] [Asc ConsultaId]
+                    consjsons <- forM econsultas createConss
+                    sendStatusJSON created201 (object ["resp" .= consjsons])
+                _ -> sendStatusJSON forbidden403 (object ["resp" .= (1::Int)])
+        Nothing -> sendStatusJSON unauthorized401 (object ["resp" .= (1::Int)])
     
 --apagar
 
@@ -152,10 +183,18 @@ deleteApagarConsultaR consultaid = do
     addHeader "ACCESS-CONTROL-ALLOW-ORIGIN" "*"
     addHeader "ACCESS-CONTROL-ALLOW-HEADERS" "AUTHORIZATION"
     addHeader "ACCESS-CONTROL-ALLOW-METHODS" "DELETE"
-    bearer <- lookupBearerAuth
-    _ <- runDB $ get404 consultaid
-    runDB $ delete consultaid
-    sendStatusJSON ok200 (object ["resp" .= (1::Int)])
+    mbearer <- lookupBearerAuth
+    mjwtInfo <- liftIO $ jwtAll mbearer
+    case mjwtInfo of
+        Just jwtInfo -> do
+            case (jwjCargo jwtInfo) of
+                x | elem x [1,2,3] -> do
+                    _ <- runDB $ get404 consultaid
+                    runDB $ delete consultaid
+                    sendStatusJSON ok200 (object ["resp" .= (1::Int)])
+                _ -> sendStatusJSON forbidden403 (object ["resp" .= (1::Int)])
+        Nothing -> sendStatusJSON unauthorized401 (object ["resp" .= (1::Int)])
+    
     
 
 --alterar
@@ -171,18 +210,25 @@ putAlterarConsultaR consultaid = do
     addHeader "ACCESS-CONTROL-ALLOW-ORIGIN" "*"
     addHeader "ACCESS-CONTROL-ALLOW-HEADERS" "AUTHORIZATION"
     addHeader "ACCESS-CONTROL-ALLOW-METHODS" "PUT"
-    bearer <- lookupBearerAuth
-    consulta <- runDB $ get404 consultaid
-    consjson <- requireJsonBody :: Handler ConsReqJSON
-    --consjson <- return $ conscadConsulta conscadjson
-    isValid <- validateCons consjson
-    if (not isValid) then
-        sendStatusJSON badRequest400 (object ["resp" .= invalido])
-    else do
-        --medico <- runDB $ getBy404 $ UniqueUserId (consreqMedicoid consjson)
-        cleancons <- liftIO $ cleanAltCons consjson consulta
-        runDB $ replace consultaid cleancons
-        sendStatusJSON ok200 (object ["resp" .= consultaid])
+    mbearer <- lookupBearerAuth
+    mjwtInfo <- liftIO $ jwtAll mbearer
+    case mjwtInfo of
+        Just jwtInfo -> do
+            case (jwjCargo jwtInfo) of
+                x | elem x [1,2,3] -> do
+                    consulta <- runDB $ get404 consultaid
+                    consjson <- requireJsonBody :: Handler ConsReqJSON
+                    --consjson <- return $ conscadConsulta conscadjson
+                    isValid <- validateCons consjson
+                    if (not isValid) then
+                        sendStatusJSON badRequest400 (object ["resp" .= invalido])
+                    else do
+                        --medico <- runDB $ getBy404 $ UniqueUserId (consreqMedicoid consjson)
+                        cleancons <- liftIO $ cleanAltCons consjson consulta
+                        runDB $ replace consultaid cleancons
+                        sendStatusJSON ok200 (object ["resp" .= consultaid])
+                _ -> sendStatusJSON forbidden403 (object ["resp" .= (1::Int)])
+        Nothing -> sendStatusJSON unauthorized401 (object ["resp" .= (1::Int)])
     where
     invalido = "Invalido" :: Text
 
