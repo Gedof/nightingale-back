@@ -26,13 +26,13 @@ postConsultaR = do
     addHeader "ACCESS-CONTROL-ALLOW-ORIGIN" "*"
     addHeader "ACCESS-CONTROL-ALLOW-HEADERS" "AUTHORIZATION"
     mbearer <- lookupBearerAuth
-    consjson <- requireJsonBody :: Handler ConsReqJSON
-    --consjson <- return $ conscadConsulta conscadjson
     mjwtInfo <- liftIO $ jwtAll mbearer
     case mjwtInfo of
         Just jwtInfo -> do
             case (jwjCargo jwtInfo) of
                 x | elem x [1,2,3] -> do
+                    consjson <- requireJsonBody :: Handler ConsReqJSON
+                    --consjson <- return $ conscadConsulta conscadjson
                     isValid <- validateCons consjson
                     if (not isValid) then
                         sendStatusJSON badRequest400 (object ["resp" .= invalido])

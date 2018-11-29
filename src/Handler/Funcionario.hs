@@ -11,6 +11,7 @@ import Data.Time
 import Handler.Validation
 import Handler.JSONTypes
 import Data.Text as T (pack,unpack,Text)
+import Handler.Login
 --import Data.Hash.MD5
 
 
@@ -25,16 +26,23 @@ postFuncionarioR :: Handler TypedContent
 postFuncionarioR = do
     addHeader "ACCESS-CONTROL-ALLOW-ORIGIN" "*"
     addHeader "ACCESS-CONTROL-ALLOW-HEADERS" "AUTHORIZATION"
-    bearer <- lookupBearerAuth
-    funjson <- requireJsonBody :: Handler FunReqJSON
-    --funjson <- return $ funcadFuncionario funcadjson
-    isValid <- return $ validateFunCad funjson
-    if (not isValid) then
-        sendStatusJSON badRequest400 (object ["resp" .= invalido])
-    else do
-        cleanfun <- liftIO $ cleanFuncionario funjson
-        funcionarioid <- runDB $ insert cleanfun
-        sendStatusJSON created201 (object ["resp" .= funcionarioid,"bearer" .= bearer])
+    mbearer <- lookupBearerAuth
+    mjwtInfo <- liftIO $ jwtAll mbearer
+    case mjwtInfo of
+        Just jwtInfo -> do
+            case (jwjCargo jwtInfo) of
+                x | elem x [1] -> do
+                    funjson <- requireJsonBody :: Handler FunReqJSON
+                    --funjson <- return $ funcadFuncionario funcadjson
+                    isValid <- return $ validateFunCad funjson
+                    if (not isValid) then
+                        sendStatusJSON badRequest400 (object ["resp" .= invalido])
+                    else do
+                        cleanfun <- liftIO $ cleanFuncionario funjson
+                        funcionarioid <- runDB $ insert cleanfun
+                        sendStatusJSON created201 (object ["resp" .= funcionarioid])
+                _ -> sendStatusJSON forbidden403 (object ["resp" .= (1::Int)])
+        Nothing -> sendStatusJSON unauthorized401 (object ["resp" .= (1::Int)])
     where
     invalido = "Invalido" :: Text
     
@@ -114,13 +122,20 @@ getSingleFuncionarioR :: UsuarioId -> Handler TypedContent
 getSingleFuncionarioR funcionarioid = do
     addHeader "ACCESS-CONTROL-ALLOW-ORIGIN" "*"
     addHeader "ACCESS-CONTROL-ALLOW-HEADERS" "AUTHORIZATION"
-    bearer <- lookupBearerAuth
-    funcionario <- runDB $ get404 funcionarioid :: Handler Usuario
-    if ((usuarioTipo funcionario) == "Medico") then do
-        sendStatusJSON badRequest400 (object ["resp" .= invalido])
-    else do
-        fungetjson <- return $ createFunGet funcionarioid funcionario
-        sendStatusJSON ok200 (object ["resp" .= fungetjson])
+    mbearer <- lookupBearerAuth
+    mjwtInfo <- liftIO $ jwtAll mbearer
+    case mjwtInfo of
+        Just jwtInfo -> do
+            case (jwjCargo jwtInfo) of
+                x | elem x [1,2,3] -> do
+                    funcionario <- runDB $ get404 funcionarioid :: Handler Usuario
+                    if ((usuarioTipo funcionario) == "Medico") then do
+                        sendStatusJSON badRequest400 (object ["resp" .= invalido])
+                    else do
+                        fungetjson <- return $ createFunGet funcionarioid funcionario
+                        sendStatusJSON ok200 (object ["resp" .= fungetjson])
+                _ -> sendStatusJSON forbidden403 (object ["resp" .= (1::Int)])
+        Nothing -> sendStatusJSON unauthorized401 (object ["resp" .= (1::Int)])
     where
     invalido = "Invalido" :: Text
     
@@ -192,13 +207,20 @@ deleteApagarFuncionarioR usuarioid = do
     addHeader "ACCESS-CONTROL-ALLOW-ORIGIN" "*"
     addHeader "ACCESS-CONTROL-ALLOW-HEADERS" "AUTHORIZATION"
     addHeader "ACCESS-CONTROL-ALLOW-METHODS" "DELETE"
-    bearer <- lookupBearerAuth
-    funcionario <- runDB $ get404 usuarioid
-    if ((usuarioTipo funcionario) == "Medico") then
-        sendStatusJSON badRequest400 (object ["resp" .= invalido])
-    else do
-        runDB $ delete usuarioid
-        sendStatusJSON ok200 (object ["resp" .= (1::Int)])
+    mbearer <- lookupBearerAuth
+    mjwtInfo <- liftIO $ jwtAll mbearer
+    case mjwtInfo of
+        Just jwtInfo -> do
+            case (jwjCargo jwtInfo) of
+                x | elem x [1] -> do
+                    funcionario <- runDB $ get404 usuarioid
+                    if ((usuarioTipo funcionario) == "Medico") then
+                        sendStatusJSON badRequest400 (object ["resp" .= invalido])
+                    else do
+                        runDB $ delete usuarioid
+                        sendStatusJSON ok200 (object ["resp" .= (1::Int)])
+                _ -> sendStatusJSON forbidden403 (object ["resp" .= (1::Int)])
+        Nothing -> sendStatusJSON unauthorized401 (object ["resp" .= (1::Int)])
     where
     invalido = "Invalido" :: Text
     
@@ -215,16 +237,23 @@ putAlterarFuncionarioR usuarioid = do
     addHeader "ACCESS-CONTROL-ALLOW-ORIGIN" "*"
     addHeader "ACCESS-CONTROL-ALLOW-HEADERS" "AUTHORIZATION"
     addHeader "ACCESS-CONTROL-ALLOW-METHODS" "PUT"
-    bearer <- lookupBearerAuth
-    funcionario <- runDB $ get404 usuarioid
-    funjson <- requireJsonBody :: Handler FunAltJSON
-    isValid <- return $ validateFunAlt funjson
-    if (((usuarioTipo funcionario) == "Medico") || (not isValid)) then
-        sendStatusJSON badRequest400 (object ["resp" .= invalido])
-    else do
-        cleanfun <- liftIO $ cleanAltFuncionario funjson funcionario
-        runDB $ replace usuarioid cleanfun
-        sendStatusJSON ok200 (object ["resp" .= usuarioid])
+    mbearer <- lookupBearerAuth
+    mjwtInfo <- liftIO $ jwtAll mbearer
+    case mjwtInfo of
+        Just jwtInfo -> do
+            case (jwjCargo jwtInfo) of
+                x | elem x [1] -> do
+                    funcionario <- runDB $ get404 usuarioid
+                    funjson <- requireJsonBody :: Handler FunAltJSON
+                    isValid <- return $ validateFunAlt funjson
+                    if (((usuarioTipo funcionario) == "Medico") || (not isValid)) then
+                        sendStatusJSON badRequest400 (object ["resp" .= invalido])
+                    else do
+                        cleanfun <- liftIO $ cleanAltFuncionario funjson funcionario
+                        runDB $ replace usuarioid cleanfun
+                        sendStatusJSON ok200 (object ["resp" .= usuarioid])
+                _ -> sendStatusJSON forbidden403 (object ["resp" .= (1::Int)])
+        Nothing -> sendStatusJSON unauthorized401 (object ["resp" .= (1::Int)])
     where
     invalido = "Invalido" :: Text
   
@@ -285,14 +314,21 @@ getListFuncionarioR :: Handler TypedContent
 getListFuncionarioR = do
     addHeader "ACCESS-CONTROL-ALLOW-ORIGIN" "*"
     addHeader "ACCESS-CONTROL-ALLOW-HEADERS" "AUTHORIZATION"
-    bearer <- lookupBearerAuth
-    mNome <- lookupGetParam $ T.pack "nome"
-    mCargo <- lookupGetParam $ T.pack "cargo"
-    nomeFilter <- return $ createFuncFilterNome mNome
-    rgFilter <- return $ createFuncFilterCargo mCargo
-    efuncionarios <- runDB $ selectList (concat [[UsuarioTipo !=. "Medico"],nomeFilter,rgFilter]) [Asc UsuarioId]
-    funcionarios <- return $ map createFunGetE efuncionarios
-    sendStatusJSON ok200 (object ["resp" .= funcionarios])
+    mbearer <- lookupBearerAuth
+    mjwtInfo <- liftIO $ jwtAll mbearer
+    case mjwtInfo of
+        Just jwtInfo -> do
+            case (jwjCargo jwtInfo) of
+                x | elem x [1,2,3] -> do
+                    mNome <- lookupGetParam $ T.pack "nome"
+                    mCargo <- lookupGetParam $ T.pack "cargo"
+                    nomeFilter <- return $ createFuncFilterNome mNome
+                    rgFilter <- return $ createFuncFilterCargo mCargo
+                    efuncionarios <- runDB $ selectList (concat [[UsuarioTipo !=. "Medico"],nomeFilter,rgFilter]) [Asc UsuarioId]
+                    funcionarios <- return $ map createFunGetE efuncionarios
+                    sendStatusJSON ok200 (object ["resp" .= funcionarios])
+                _ -> sendStatusJSON forbidden403 (object ["resp" .= (1::Int)])
+        Nothing -> sendStatusJSON unauthorized401 (object ["resp" .= (1::Int)])
     
     
 createFuncFilterNome :: Maybe Text -> [Filter Usuario]
