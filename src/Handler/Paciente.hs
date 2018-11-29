@@ -12,6 +12,7 @@ import Handler.Validation
 import Handler.JSONTypes
 import Handler.Prontuario
 import Handler.Consulta
+import Handler.Login
 import Data.Text as T (pack,unpack,Text)
 
 
@@ -27,16 +28,23 @@ postPacienteR :: Handler TypedContent
 postPacienteR = do
     addHeader "ACCESS-CONTROL-ALLOW-ORIGIN" "*"
     addHeader "ACCESS-CONTROL-ALLOW-HEADERS" "AUTHORIZATION"
-    bearer <- lookupBearerAuth
-    pacjson <- requireJsonBody :: Handler PacReqJSON
-    --pacjson <- return $ paccadPaciente paccadjson
-    isValid <- return $ validatePacCad pacjson
-    if (not isValid) then
-        sendStatusJSON badRequest400 (object ["resp" .= invalido])
-    else do
-        cleanpac <- liftIO $ cleanPaciente pacjson
-        pacienteid <- runDB $ insert cleanpac
-        sendStatusJSON created201 (object ["resp" .= pacienteid,"bearer" .= bearer])
+    mbearer <- lookupBearerAuth
+    mjwtInfo <- jwtAll mbearer
+    case mjwtInfo of
+        Just jwtInfo -> do
+            case (jwjCargo jwtInfo) of
+                x | elem x [1,2,3] -> do
+                    pacjson <- requireJsonBody :: Handler PacReqJSON
+                    --pacjson <- return $ paccadPaciente paccadjson
+                    isValid <- return $ validatePacCad pacjson
+                    if (not isValid) then
+                        sendStatusJSON badRequest400 (object ["resp" .= invalido])
+                    else do
+                        cleanpac <- liftIO $ cleanPaciente pacjson
+                        pacienteid <- runDB $ insert cleanpac
+                        sendStatusJSON created201 (object ["resp" .= pacienteid])
+                _ -> sendStatusJSON forbidden403 (object ["resp" .= (1::Int)])
+        Nothing -> sendStatusJSON unauthorized401 (object ["resp" .= (1::Int)])
     where
     invalido = "Invalido" :: Text
     
@@ -49,7 +57,7 @@ validatePacCad pacjson = validPac && validEnds && validTel
     validTel = validateTels (pacreqTelefone pacjson) (pacreqCelular pacjson)
     
 validateTels :: Maybe Text -> Maybe Text -> Bool
-validateTels Nothing Nothing = False
+--validateTels Nothing Nothing = False
 validateTels _ _ = True
 
 validatePac :: Text -> Text -> Bool
@@ -63,9 +71,11 @@ validateEnd mcep mestado = valCep && valEst
     where
     --valPais = paisCheck $ unpack $ pais end
     valCep = case mcep of
+        Just "" -> True
         Just cep -> cepCheck cep
         Nothing -> True
     valEst = case mestado of
+        Just "" -> True
         Just estado -> estadoCheck estado
         Nothing -> True
 
@@ -110,10 +120,18 @@ getSinglePacienteR :: PacienteId -> Handler TypedContent
 getSinglePacienteR pacienteid = do
     addHeader "ACCESS-CONTROL-ALLOW-ORIGIN" "*"
     addHeader "ACCESS-CONTROL-ALLOW-HEADERS" "AUTHORIZATION"
-    bearer <- lookupBearerAuth
-    paciente <- runDB $ get404 pacienteid :: Handler Paciente
-    pacgetjson <- return $ createPacGet pacienteid paciente
-    sendStatusJSON ok200 (object ["resp" .= pacgetjson])
+    mbearer <- lookupBearerAuth
+    mjwtInfo <- jwtAll mbearer
+    case mjwtInfo of
+        Just jwtInfo -> do
+            case (jwjCargo jwtInfo) of
+                x | elem x [1,2,3] -> do
+                    paciente <- runDB $ get404 pacienteid :: Handler Paciente
+                    pacgetjson <- return $ createPacGet pacienteid paciente
+                    sendStatusJSON ok200 (object ["resp" .= pacgetjson])
+                _ -> sendStatusJSON forbidden403 (object ["resp" .= (1::Int)])
+        Nothing -> sendStatusJSON unauthorized401 (object ["resp" .= (1::Int)])
+    
     
 createPacGet :: PacienteId -> Paciente -> PacResJSON
 createPacGet pacienteid pac =
@@ -177,14 +195,21 @@ deleteApagarPacienteR pacienteid = do
     addHeader "ACCESS-CONTROL-ALLOW-ORIGIN" "*"
     addHeader "ACCESS-CONTROL-ALLOW-HEADERS" "AUTHORIZATION"
     addHeader "ACCESS-CONTROL-ALLOW-METHODS" "DELETE"
-    bearer <- lookupBearerAuth
-    _ <- runDB $ get404 pacienteid
-    econs <- runDB $ selectList [ConsultaPacienteid ==. pacienteid] [Asc ConsultaId]
-    epronts <- runDB $ selectList [EntradaProntuarioPacienteid ==. pacienteid] [Asc EntradaProntuarioId]
-    _ <- forM econs apagaCons
-    _ <- forM epronts apagaPront
-    runDB $ delete pacienteid
-    sendStatusJSON ok200 (object ["resp" .= (1::Int)])
+    mbearer <- lookupBearerAuth
+    mjwtInfo <- jwtAll mbearer
+    case mjwtInfo of
+        Just jwtInfo -> do
+            case (jwjCargo jwtInfo) of
+                x | elem x [1] -> do
+                    _ <- runDB $ get404 pacienteid
+                    econs <- runDB $ selectList [ConsultaPacienteid ==. pacienteid] [Asc ConsultaId]
+                    epronts <- runDB $ selectList [EntradaProntuarioPacienteid ==. pacienteid] [Asc EntradaProntuarioId]
+                    _ <- forM econs apagaCons
+                    _ <- forM epronts apagaPront
+                    runDB $ delete pacienteid
+                    sendStatusJSON ok200 (object ["resp" .= (1::Int)])
+                _ -> sendStatusJSON forbidden403 (object ["resp" .= (1::Int)])
+        Nothing -> sendStatusJSON unauthorized401 (object ["resp" .= (1::Int)])
     where
     apagaCons econ = deleteApagarConsultaR (entityKey econ)
     apagaPront epront = deleteApagarProntuarioR (entityKey epront)
@@ -204,17 +229,24 @@ putAlterarPacienteR pacienteid = do
     addHeader "ACCESS-CONTROL-ALLOW-ORIGIN" "*"
     addHeader "ACCESS-CONTROL-ALLOW-HEADERS" "AUTHORIZATION"
     addHeader "ACCESS-CONTROL-ALLOW-METHODS" "PUT"
-    bearer <- lookupBearerAuth
-    paciente <- runDB $ get404 pacienteid
-    pacjson <- requireJsonBody :: Handler PacReqJSON
-    --pacjson <- return $ paccadPaciente paccadjson
-    isValid <- return $ validatePacCad pacjson
-    if (not isValid) then
-        sendStatusJSON badRequest400 (object ["resp" .= invalido])
-    else do
-        cleanpac <- liftIO $ cleanAltPaciente pacjson $ pacienteInsertedTimestamp paciente
-        runDB $ replace pacienteid cleanpac
-        sendStatusJSON ok200 (object ["resp" .= pacienteid])
+    mbearer <- lookupBearerAuth
+    mjwtInfo <- jwtAll mbearer
+    case mjwtInfo of
+        Just jwtInfo -> do
+            case (jwjCargo jwtInfo) of
+                x | elem x [1,2,3] -> do
+                    paciente <- runDB $ get404 pacienteid
+                    pacjson <- requireJsonBody :: Handler PacReqJSON
+                    --pacjson <- return $ paccadPaciente paccadjson
+                    isValid <- return $ validatePacCad pacjson
+                    if (not isValid) then
+                        sendStatusJSON badRequest400 (object ["resp" .= invalido])
+                    else do
+                        cleanpac <- liftIO $ cleanAltPaciente pacjson $ pacienteInsertedTimestamp paciente
+                        runDB $ replace pacienteid cleanpac
+                        sendStatusJSON ok200 (object ["resp" .= pacienteid])
+                _ -> sendStatusJSON forbidden403 (object ["resp" .= (1::Int)])
+        Nothing -> sendStatusJSON unauthorized401 (object ["resp" .= (1::Int)])
     where
     invalido = "Invalido" :: Text
     
@@ -258,16 +290,23 @@ getListPacienteR :: Handler TypedContent
 getListPacienteR = do
     addHeader "ACCESS-CONTROL-ALLOW-ORIGIN" "*"
     addHeader "ACCESS-CONTROL-ALLOW-HEADERS" "AUTHORIZATION"
-    bearer <- lookupBearerAuth
-    mNome <- lookupGetParam $ T.pack "nome"
-    mRg <- lookupGetParam $ T.pack "rg"
-    mCpf <- lookupGetParam $ T.pack "cpf"
-    nomeFilter <- return $ createPacFilterNome mNome
-    rgFilter <- return $ createPacFilterRg mRg
-    cpfFilter <- return $ createPacFilterCpf mCpf
-    epacientes <- runDB $ selectList (concat [nomeFilter, rgFilter, cpfFilter]) [Asc PacienteId]
-    pacientes <- return $ map createPacGetE epacientes
-    sendStatusJSON ok200 (object ["resp" .= pacientes,"params" .= [mNome, mRg, mCpf]])
+    mbearer <- lookupBearerAuth
+    mjwtInfo <- jwtAll mbearer
+    case mjwtInfo of
+        Just jwtInfo -> do
+            case (jwjCargo jwtInfo) of
+                x | elem x [1,2,3] -> do
+                    mNome <- lookupGetParam $ T.pack "nome"
+                    mRg <- lookupGetParam $ T.pack "rg"
+                    mCpf <- lookupGetParam $ T.pack "cpf"
+                    nomeFilter <- return $ createPacFilterNome mNome
+                    rgFilter <- return $ createPacFilterRg mRg
+                    cpfFilter <- return $ createPacFilterCpf mCpf
+                    epacientes <- runDB $ selectList (concat [nomeFilter, rgFilter, cpfFilter]) [Asc PacienteId]
+                    pacientes <- return $ map createPacGetE epacientes
+                    sendStatusJSON ok200 (object ["resp" .= pacientes,"params" .= [mNome, mRg, mCpf]])
+                _ -> sendStatusJSON forbidden403 (object ["resp" .= (1::Int)])
+        Nothing -> sendStatusJSON unauthorized401 (object ["resp" .= (1::Int)])
     
 
 
