@@ -27,7 +27,7 @@ postFuncionarioR = do
     addHeader "ACCESS-CONTROL-ALLOW-ORIGIN" "*"
     addHeader "ACCESS-CONTROL-ALLOW-HEADERS" "AUTHORIZATION"
     mbearer <- lookupBearerAuth
-    mjwtInfo <- liftIO $ jwtAll mbearer
+    mjwtInfo <- jwtAll mbearer
     case mjwtInfo of
         Just jwtInfo -> do
             case (jwjCargo jwtInfo) of
@@ -123,7 +123,7 @@ getSingleFuncionarioR funcionarioid = do
     addHeader "ACCESS-CONTROL-ALLOW-ORIGIN" "*"
     addHeader "ACCESS-CONTROL-ALLOW-HEADERS" "AUTHORIZATION"
     mbearer <- lookupBearerAuth
-    mjwtInfo <- liftIO $ jwtAll mbearer
+    mjwtInfo <- jwtAll mbearer
     case mjwtInfo of
         Just jwtInfo -> do
             case (jwjCargo jwtInfo) of
@@ -208,7 +208,7 @@ deleteApagarFuncionarioR usuarioid = do
     addHeader "ACCESS-CONTROL-ALLOW-HEADERS" "AUTHORIZATION"
     addHeader "ACCESS-CONTROL-ALLOW-METHODS" "DELETE"
     mbearer <- lookupBearerAuth
-    mjwtInfo <- liftIO $ jwtAll mbearer
+    mjwtInfo <- jwtAll mbearer
     case mjwtInfo of
         Just jwtInfo -> do
             case (jwjCargo jwtInfo) of
@@ -238,7 +238,7 @@ putAlterarFuncionarioR usuarioid = do
     addHeader "ACCESS-CONTROL-ALLOW-HEADERS" "AUTHORIZATION"
     addHeader "ACCESS-CONTROL-ALLOW-METHODS" "PUT"
     mbearer <- lookupBearerAuth
-    mjwtInfo <- liftIO $ jwtAll mbearer
+    mjwtInfo <- jwtAll mbearer
     case mjwtInfo of
         Just jwtInfo -> do
             case (jwjCargo jwtInfo) of
@@ -315,7 +315,7 @@ getListFuncionarioR = do
     addHeader "ACCESS-CONTROL-ALLOW-ORIGIN" "*"
     addHeader "ACCESS-CONTROL-ALLOW-HEADERS" "AUTHORIZATION"
     mbearer <- lookupBearerAuth
-    mjwtInfo <- liftIO $ jwtAll mbearer
+    mjwtInfo <- jwtAll mbearer
     case mjwtInfo of
         Just jwtInfo -> do
             case (jwjCargo jwtInfo) of

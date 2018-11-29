@@ -19,7 +19,7 @@ import Data.ByteString.Lazy as BSL
 import Data.ByteString.Char8 as BSC
 import Data.ByteString as BS
 import Data.Time
-import Text.Read
+import Text.Read (readMaybe)
 import Data.Aeson
 import Data.Aeson.Casing
 import Data.Text as T (pack,unpack,Text)
@@ -49,26 +49,34 @@ instance ToJSON JwtJSON where
 instance FromJSON JwtJSON where
    parseJSON = genericParseJSON $ aesonPrefix snakeCase
 
-jwtAll :: (Maybe T.Text) -> IO (Maybe JwtJSON)
+jwtAll :: (Maybe T.Text) -> Handler (Maybe JwtJSON)
 jwtAll mjwt = do
     case mjwt of
         Just jwt -> do
             eitherJwt <- return $ hmacDecode jwtKey $ BSC.pack $ T.unpack jwt
             case eitherJwt of
                 Right jwtr -> do
-                    maybeJwtinfo <- return $ Data.Aeson.decode $ BSL.fromStrict $ snd jwtr :: IO (Maybe JwtJSON)
+                    maybeJwtinfo <- return $ Data.Aeson.decode $ BSL.fromStrict $ snd jwtr :: Handler (Maybe JwtJSON)
                     case maybeJwtinfo of
                         Just jwtinfo -> do
                             expdate <- return $ jwjExp jwtinfo
-                            valido <- checkDate expdate
+                            validoData <- liftIO $ checkDate expdate
+                            validoUsu <- checkUsuario $ jwjId jwtinfo
                             --valido <- return $ True
-                            if valido then 
+                            if (validoData && validoUsu) then 
                                 return $ Just $ jwtinfo
                             else
                                 return $ Nothing
                         Nothing -> return $ Nothing
                 Left _ -> return $ Nothing
         Nothing -> return $ Nothing
+        
+checkUsuario :: UsuarioId -> Handler Bool
+checkUsuario usuid = do
+    musu <- runDB $ get usuid
+    case musu of
+        Just _ -> return $ True
+        Nothing -> return $ False
 
 jwtId :: T.Text -> IO (Maybe UsuarioId)
 jwtId jwt = do
@@ -199,7 +207,7 @@ getLoginR = do
             jwtks <- return $ BSC.unpack jwtk
             jwtt <- return $ T.pack jwtks
             mbearer <- return $ Just jwtt
-            mjwtInfo <- liftIO $ jwtAll mbearer
+            mjwtInfo <- jwtAll mbearer
             case mjwtInfo of
                 Just jwtInfo -> do
                     now <- liftIO $ getCurrentTime

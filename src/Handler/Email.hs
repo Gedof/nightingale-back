@@ -106,7 +106,7 @@ patchAlterarSenhaR = do
     mbearer <- lookupBearerAuth
     senhajson <- requireJsonBody :: Handler AltSenhaJSON
     --prontjson <- return $ prontcadEntradaProntuario prontcadjson
-    mjwtInfo <- liftIO $ jwtAll mbearer
+    mjwtInfo <- jwtAll mbearer
     case mjwtInfo of
         Just jwtInfo -> do
             isValid <- return $ (senhaPassword senhajson == senhaPassword2 senhajson)

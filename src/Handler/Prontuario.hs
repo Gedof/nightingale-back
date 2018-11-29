@@ -58,7 +58,7 @@ postProntuarioR = do
     mbearer <- lookupBearerAuth
     prontjson <- requireJsonBody :: Handler ProntReqJSON
     --prontjson <- return $ prontcadEntradaProntuario prontcadjson
-    mjwtInfo <- liftIO $ jwtAll mbearer
+    mjwtInfo <- jwtAll mbearer
     case mjwtInfo of
         Just jwtInfo -> do
             case (jwjCargo jwtInfo) of
@@ -120,7 +120,7 @@ getSingleProntuarioR prontuarioid = do
     addHeader "ACCESS-CONTROL-ALLOW-ORIGIN" "*"
     addHeader "ACCESS-CONTROL-ALLOW-HEADERS" "AUTHORIZATION"
     mbearer <- lookupBearerAuth
-    mjwtInfo <- liftIO $ jwtAll mbearer
+    mjwtInfo <- jwtAll mbearer
     case mjwtInfo of
         Just jwtInfo -> do
             case (jwjCargo jwtInfo) of
@@ -155,7 +155,7 @@ getListProntuarioR = do
     addHeader "ACCESS-CONTROL-ALLOW-ORIGIN" "*"
     addHeader "ACCESS-CONTROL-ALLOW-HEADERS" "AUTHORIZATION"
     mbearer <- lookupBearerAuth
-    mjwtInfo <- liftIO $ jwtAll mbearer
+    mjwtInfo <- jwtAll mbearer
     case mjwtInfo of
         Just jwtInfo -> do
             case (jwjCargo jwtInfo) of
@@ -186,7 +186,7 @@ getPacProntuarioR pacienteid = do
     addHeader "ACCESS-CONTROL-ALLOW-ORIGIN" "*"
     addHeader "ACCESS-CONTROL-ALLOW-HEADERS" "AUTHORIZATION"
     mbearer <- lookupBearerAuth
-    mjwtInfo <- liftIO $ jwtAll mbearer
+    mjwtInfo <- jwtAll mbearer
     case mjwtInfo of
         Just jwtInfo -> do
             case (jwjCargo jwtInfo) of

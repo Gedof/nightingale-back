@@ -26,7 +26,7 @@ postConsultaR = do
     addHeader "ACCESS-CONTROL-ALLOW-ORIGIN" "*"
     addHeader "ACCESS-CONTROL-ALLOW-HEADERS" "AUTHORIZATION"
     mbearer <- lookupBearerAuth
-    mjwtInfo <- liftIO $ jwtAll mbearer
+    mjwtInfo <- jwtAll mbearer
     case mjwtInfo of
         Just jwtInfo -> do
             case (jwjCargo jwtInfo) of
@@ -87,7 +87,7 @@ getSingleConsultaR consultaid = do
     addHeader "ACCESS-CONTROL-ALLOW-ORIGIN" "*"
     addHeader "ACCESS-CONTROL-ALLOW-HEADERS" "AUTHORIZATION"
     mbearer <- lookupBearerAuth
-    mjwtInfo <- liftIO $ jwtAll mbearer
+    mjwtInfo <- jwtAll mbearer
     case mjwtInfo of
         Just jwtInfo -> do
             case (jwjCargo jwtInfo) of
@@ -125,7 +125,7 @@ getListConsultaR = do
     addHeader "ACCESS-CONTROL-ALLOW-ORIGIN" "*"
     addHeader "ACCESS-CONTROL-ALLOW-HEADERS" "AUTHORIZATION"
     mbearer <- lookupBearerAuth
-    mjwtInfo <- liftIO $ jwtAll mbearer
+    mjwtInfo <- jwtAll mbearer
     case mjwtInfo of
         Just jwtInfo -> do
             case (jwjCargo jwtInfo) of
@@ -158,7 +158,7 @@ getMedConsultaR medicoid = do
     addHeader "ACCESS-CONTROL-ALLOW-ORIGIN" "*"
     addHeader "ACCESS-CONTROL-ALLOW-HEADERS" "AUTHORIZATION"
     mbearer <- lookupBearerAuth
-    mjwtInfo <- liftIO $ jwtAll mbearer
+    mjwtInfo <- jwtAll mbearer
     case mjwtInfo of
         Just jwtInfo -> do
             case (jwjCargo jwtInfo) of
@@ -184,7 +184,7 @@ deleteApagarConsultaR consultaid = do
     addHeader "ACCESS-CONTROL-ALLOW-HEADERS" "AUTHORIZATION"
     addHeader "ACCESS-CONTROL-ALLOW-METHODS" "DELETE"
     mbearer <- lookupBearerAuth
-    mjwtInfo <- liftIO $ jwtAll mbearer
+    mjwtInfo <- jwtAll mbearer
     case mjwtInfo of
         Just jwtInfo -> do
             case (jwjCargo jwtInfo) of
@@ -211,7 +211,7 @@ putAlterarConsultaR consultaid = do
     addHeader "ACCESS-CONTROL-ALLOW-HEADERS" "AUTHORIZATION"
     addHeader "ACCESS-CONTROL-ALLOW-METHODS" "PUT"
     mbearer <- lookupBearerAuth
-    mjwtInfo <- liftIO $ jwtAll mbearer
+    mjwtInfo <- jwtAll mbearer
     case mjwtInfo of
         Just jwtInfo -> do
             case (jwjCargo jwtInfo) of
