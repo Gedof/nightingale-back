@@ -328,7 +328,7 @@ getListFuncionarioR = do
                     funcionarios <- return $ map createFunGetE efuncionarios
                     sendStatusJSON ok200 (object ["resp" .= funcionarios])
                 _ -> sendStatusJSON forbidden403 (object ["resp" .= (1::Int)])
-        Nothing -> sendStatusJSON unauthorized401 (object ["resp" .= (1::Int)])
+        Nothing -> sendStatusJSON unauthorized401 (object ["resp" .= (1::Int), "bearer" .= mbearer, "jwt" .= mjwtInfo])
     
     
 createFuncFilterNome :: Maybe Text -> [Filter Usuario]

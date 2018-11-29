@@ -13,6 +13,7 @@ import Handler.JSONTypes
 import Data.Text as T (pack,unpack,Text)
 import Text.Read (readMaybe)
 import Database.Persist.Sql
+import Handler.Login
 --import Data.Hash.MD5
 
 optionsMedicoR :: Handler TypedContent
@@ -28,20 +29,27 @@ postMedicoR :: Handler TypedContent
 postMedicoR = do
     addHeader "ACCESS-CONTROL-ALLOW-ORIGIN" "*"
     addHeader "ACCESS-CONTROL-ALLOW-HEADERS" "AUTHORIZATION"
-    bearer <- lookupBearerAuth
-    medjson <- requireJsonBody :: Handler MedReqJSON
-    --medjson <- return $ medcadMedico medcadjson
-    isValid <- validateMedCad medjson
-    if (not isValid) then
-        sendStatusJSON badRequest400 (object ["resp" .= invalido])
-    else do
-        cleanusu <- liftIO $ cleanUsu medjson
-        usuid <- runDB $ insert cleanusu
-        cleanmed <- return $ cleanMed usuid $ medreqCrm medjson
-        medid <- runDB $ insert cleanmed
-        cleanespecmeds <- liftIO $ cleanEspecMeds medid $ medreqEspecializacoes medjson
-        especmedics <- forM cleanespecmeds insEspecMed
-        sendStatusJSON created201 (object ["resp" .= (object ["usuarioid" .= usuid,"medicoid" .= medid]),"bearer" .= bearer])
+    mbearer <- lookupBearerAuth
+    mjwtInfo <- jwtAll mbearer
+    case mjwtInfo of
+        Just jwtInfo -> do
+            case (jwjCargo jwtInfo) of
+                x | elem x [1] -> do
+                    medjson <- requireJsonBody :: Handler MedReqJSON
+                    --medjson <- return $ medcadMedico medcadjson
+                    isValid <- validateMedCad medjson
+                    if (not isValid) then
+                        sendStatusJSON badRequest400 (object ["resp" .= invalido])
+                    else do
+                        cleanusu <- liftIO $ cleanUsu medjson
+                        usuid <- runDB $ insert cleanusu
+                        cleanmed <- return $ cleanMed usuid $ medreqCrm medjson
+                        medid <- runDB $ insert cleanmed
+                        cleanespecmeds <- liftIO $ cleanEspecMeds medid $ medreqEspecializacoes medjson
+                        especmedics <- forM cleanespecmeds insEspecMed
+                        sendStatusJSON created201 (object ["resp" .= (object ["usuarioid" .= usuid,"medicoid" .= medid])])
+                _ -> sendStatusJSON forbidden403 (object ["resp" .= (1::Int)])
+        Nothing -> sendStatusJSON unauthorized401 (object ["resp" .= (1::Int)])
     where
     invalido = "Invalido" :: Text
     insEspecMed e = runDB $ insert e :: Handler EspecMedicoId
@@ -147,20 +155,27 @@ getSingleMedicoR :: MedicoId -> Handler TypedContent
 getSingleMedicoR medicoid = do
     addHeader "ACCESS-CONTROL-ALLOW-ORIGIN" "*"
     addHeader "ACCESS-CONTROL-ALLOW-HEADERS" "AUTHORIZATION"
-    bearer <- lookupBearerAuth
-    medico <- runDB $ get404 medicoid :: Handler Medico
-    emedico <- return $ Entity medicoid medico :: Handler (Entity Medico)
-    --usuarioid <- return $ medicoUserid medico
-    --usuario <- runDB $ get404 usuarioid :: Handler Usuario
-    
-    --emedico <- runDB $ getBy404 $ UniqueUserId usuarioid
-    -- medicoid <- return $ entityKey emedico
-    -- medico <- return $ entityVal emedico
-    -- especmedics <- runDB $ selectList [EspecMedicoMedicoid ==. medicoid] [Asc EspecMedicoId]
-    -- emids <- return $ map (especMedicoEspecid . entityVal) especmedics
-    -- especs <- forM emids espec
-    medgetjson <- createFromMed emedico
-    sendStatusJSON ok200 (object ["resp" .= medgetjson])
+    mbearer <- lookupBearerAuth
+    mjwtInfo <- jwtAll mbearer
+    case mjwtInfo of
+        Just jwtInfo -> do
+            case (jwjCargo jwtInfo) of
+                x | elem x [1,2,3] -> do
+                    medico <- runDB $ get404 medicoid :: Handler Medico
+                    emedico <- return $ Entity medicoid medico :: Handler (Entity Medico)
+                    --usuarioid <- return $ medicoUserid medico
+                    --usuario <- runDB $ get404 usuarioid :: Handler Usuario
+                    
+                    --emedico <- runDB $ getBy404 $ UniqueUserId usuarioid
+                    -- medicoid <- return $ entityKey emedico
+                    -- medico <- return $ entityVal emedico
+                    -- especmedics <- runDB $ selectList [EspecMedicoMedicoid ==. medicoid] [Asc EspecMedicoId]
+                    -- emids <- return $ map (especMedicoEspecid . entityVal) especmedics
+                    -- especs <- forM emids espec
+                    medgetjson <- createFromMed emedico
+                    sendStatusJSON ok200 (object ["resp" .= medgetjson])
+                _ -> sendStatusJSON forbidden403 (object ["resp" .= (1::Int)])
+        Nothing -> sendStatusJSON unauthorized401 (object ["resp" .= (1::Int)])
     where
     -- espec emid = Entity (emid) <$> (runDB $ get404 emid) :: Handler (Entity Especializacao)
     --invalido = "Invalido" :: Text
@@ -241,10 +256,17 @@ patchDesativarMedicoR medicoid = do
     addHeader "ACCESS-CONTROL-ALLOW-ORIGIN" "*"
     addHeader "ACCESS-CONTROL-ALLOW-HEADERS" "AUTHORIZATION, CONTENT-TYPE"
     addHeader "ACCESS-CONTROL-ALLOW-METHODS" "PATCH"
-    bearer <- lookupBearerAuth
-    _ <- runDB $ get404 medicoid
-    runDB $ update medicoid [MedicoAtivo =. False]
-    sendStatusJSON ok200 (object ["resp" .= medicoid])
+    mbearer <- lookupBearerAuth
+    mjwtInfo <- jwtAll mbearer
+    case mjwtInfo of
+        Just jwtInfo -> do
+            case (jwjCargo jwtInfo) of
+                x | elem x [1] -> do
+                    _ <- runDB $ get404 medicoid
+                    runDB $ update medicoid [MedicoAtivo =. False]
+                    sendStatusJSON ok200 (object ["resp" .= medicoid])
+                _ -> sendStatusJSON forbidden403 (object ["resp" .= (1::Int)])
+        Nothing -> sendStatusJSON unauthorized401 (object ["resp" .= (1::Int)])
 
 
 optionsAtivarMedicoR :: MedicoId -> Handler TypedContent
@@ -259,10 +281,17 @@ patchAtivarMedicoR medicoid = do
     addHeader "ACCESS-CONTROL-ALLOW-ORIGIN" "*"
     addHeader "ACCESS-CONTROL-ALLOW-HEADERS" "AUTHORIZATION, CONTENT-TYPE"
     addHeader "ACCESS-CONTROL-ALLOW-METHODS" "PATCH"
-    bearer <- lookupBearerAuth
-    _ <- runDB $ get404 medicoid
-    runDB $ update medicoid [MedicoAtivo =. True]
-    sendStatusJSON ok200 (object ["resp" .= medicoid])
+    mbearer <- lookupBearerAuth
+    mjwtInfo <- jwtAll mbearer
+    case mjwtInfo of
+        Just jwtInfo -> do
+            case (jwjCargo jwtInfo) of
+                x | elem x [1] -> do
+                    _ <- runDB $ get404 medicoid
+                    runDB $ update medicoid [MedicoAtivo =. True]
+                    sendStatusJSON ok200 (object ["resp" .= medicoid])
+                _ -> sendStatusJSON forbidden403 (object ["resp" .= (1::Int)])
+        Nothing -> sendStatusJSON unauthorized401 (object ["resp" .= (1::Int)])
 
 -- Alterar
 
@@ -278,23 +307,30 @@ putAlterarMedicoR medicoid = do
     addHeader "ACCESS-CONTROL-ALLOW-ORIGIN" "*"
     addHeader "ACCESS-CONTROL-ALLOW-HEADERS" "AUTHORIZATION"
     addHeader "ACCESS-CONTROL-ALLOW-METHODS" "PUT"
-    bearer <- lookupBearerAuth
-    medico <- runDB $ get404 medicoid
-    medjson <- requireJsonBody :: Handler MedAltJSON
-    isValid <- validateMedAlt medjson
-    if (not isValid) then
-        sendStatusJSON badRequest400 (object ["resp" .= invalido])
-    else do
-        usuid <- return $ medicoUserid $ medico
-        usuario <- runDB $ get404 usuid
-        cleanusu <- liftIO $ cleanAltUsu medjson usuario
-        cleanmed <- return $ cleanAltMed usuid medjson medico
-        runDB $ deleteWhere [EspecMedicoMedicoid ==. medicoid]
-        cleanespecmeds <- liftIO $ cleanEspecMeds medicoid $ medaltEspecializacoes medjson
-        runDB $ replace usuid cleanusu
-        runDB $ replace medicoid cleanmed
-        especmedics <- forM cleanespecmeds insEspecMed
-        sendStatusJSON ok200 (object ["resp" .= medicoid])
+    mbearer <- lookupBearerAuth
+    mjwtInfo <- jwtAll mbearer
+    case mjwtInfo of
+        Just jwtInfo -> do
+            case (jwjCargo jwtInfo) of
+                x | elem x [1,2,3] -> do
+                    medico <- runDB $ get404 medicoid
+                    medjson <- requireJsonBody :: Handler MedAltJSON
+                    isValid <- validateMedAlt medjson
+                    if (not isValid) then
+                        sendStatusJSON badRequest400 (object ["resp" .= invalido])
+                    else do
+                        usuid <- return $ medicoUserid $ medico
+                        usuario <- runDB $ get404 usuid
+                        cleanusu <- liftIO $ cleanAltUsu medjson usuario
+                        cleanmed <- return $ cleanAltMed usuid medjson medico
+                        runDB $ deleteWhere [EspecMedicoMedicoid ==. medicoid]
+                        cleanespecmeds <- liftIO $ cleanEspecMeds medicoid $ medaltEspecializacoes medjson
+                        runDB $ replace usuid cleanusu
+                        runDB $ replace medicoid cleanmed
+                        especmedics <- forM cleanespecmeds insEspecMed
+                        sendStatusJSON ok200 (object ["resp" .= medicoid])
+                _ -> sendStatusJSON forbidden403 (object ["resp" .= (1::Int)])
+        Nothing -> sendStatusJSON unauthorized401 (object ["resp" .= (1::Int)])
     where
     invalido = "Invalido" :: Text
     insEspecMed e = runDB $ insert e :: Handler EspecMedicoId
@@ -363,28 +399,36 @@ getListMedicoR :: Handler TypedContent
 getListMedicoR = do
     addHeader "ACCESS-CONTROL-ALLOW-ORIGIN" "*"
     addHeader "ACCESS-CONTROL-ALLOW-HEADERS" "AUTHORIZATION"
-    bearer <- lookupBearerAuth
-    mNome <- lookupGetParam $ T.pack "nome"
-    mEspec <- lookupGetParam $ T.pack "especializacao"
-    nomeFilter <- return $ createMedFilterNome mNome
-    especFilter <- return $ createMedFilterEspec mEspec
+    mbearer <- lookupBearerAuth
+    mjwtInfo <- jwtAll mbearer
+    case mjwtInfo of
+        Just jwtInfo -> do
+            case (jwjCargo jwtInfo) of
+                x | elem x [1,2,3] -> do
+                    mNome <- lookupGetParam $ T.pack "nome"
+                    mEspec <- lookupGetParam $ T.pack "especializacao"
+                    nomeFilter <- return $ createMedFilterNome mNome
+                    especFilter <- return $ createMedFilterEspec mEspec
+                    
+                    eespecmedics <- runDB $ selectList especFilter [Asc EspecMedicoId]
+                    
+                    medicoids <- return $ map (\eem -> especMedicoMedicoid $ entityVal eem) eespecmedics
+                    
+                    emedicos' <- runDB $ selectList [MedicoId <-. medicoids, MedicoAtivo ==. True] [Asc MedicoId]
+                    
+                    usuarioids' <- return $ map (\em -> medicoUserid $ entityVal em) emedicos'
+                    
+                    eusuarios <- runDB $ selectList ([UsuarioId <-. usuarioids'] ++ nomeFilter) [Asc UsuarioId]
+                    
+                    usuarioids <- return $ map entityKey eusuarios
+                    
+                    emedicos <- runDB $ selectList [MedicoUserid <-. usuarioids] [Asc MedicoId]
+                    
+                    medgetjson <- forM emedicos createFromMed
+                    sendStatusJSON ok200 (object ["resp" .= medgetjson])
+                _ -> sendStatusJSON forbidden403 (object ["resp" .= (1::Int)])
+        Nothing -> sendStatusJSON unauthorized401 (object ["resp" .= (1::Int)])
     
-    eespecmedics <- runDB $ selectList especFilter [Asc EspecMedicoId]
-    
-    medicoids <- return $ map (\eem -> especMedicoMedicoid $ entityVal eem) eespecmedics
-    
-    emedicos' <- runDB $ selectList [MedicoId <-. medicoids, MedicoAtivo ==. True] [Asc MedicoId]
-    
-    usuarioids' <- return $ map (\em -> medicoUserid $ entityVal em) emedicos'
-    
-    eusuarios <- runDB $ selectList ([UsuarioId <-. usuarioids'] ++ nomeFilter) [Asc UsuarioId]
-    
-    usuarioids <- return $ map entityKey eusuarios
-    
-    emedicos <- runDB $ selectList [MedicoUserid <-. usuarioids] [Asc MedicoId]
-    
-    medgetjson <- forM emedicos createFromMed
-    sendStatusJSON ok200 (object ["resp" .= medgetjson])
     
 
 createMedFilterNome :: Maybe Text -> [Filter Usuario]
