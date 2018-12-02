@@ -414,7 +414,7 @@ getListMedicoR = do
                     
                     medicoids <- return $ map (\eem -> especMedicoMedicoid $ entityVal eem) eespecmedics
                     
-                    emedicos' <- runDB $ selectList [MedicoId <-. medicoids, MedicoAtivo ==. True] [Asc MedicoId]
+                    emedicos' <- runDB $ selectList [MedicoId <-. medicoids] [Asc MedicoId]
                     
                     usuarioids' <- return $ map (\em -> medicoUserid $ entityVal em) emedicos'
                     

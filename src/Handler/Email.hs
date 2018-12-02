@@ -11,13 +11,26 @@ import Import
 import Data.Time
 import Handler.Validation
 import Handler.JSONTypes
-import Data.ByteString.Char8 as BS (pack)
+import Data.ByteString.Char8 as BS (pack, unpack)
+import Data.ByteString.Lazy as BSL (toStrict)
 import Data.Text as T (pack,unpack,Text)
 import Mail.Hailgun
 import Handler.Login
 import Test.RandomStrings
 import Data.Aeson
 import Data.Aeson.Casing
+import Network.HTTP.Simple as NHS
+
+
+data EmailJSON = EmailJSON {
+    emailEmail :: Text,
+    emailSenha :: Text
+} deriving Generic
+
+instance ToJSON EmailJSON where
+   toJSON = genericToJSON $ aesonPrefix snakeCase
+instance FromJSON EmailJSON where
+   parseJSON = genericParseJSON $ aesonPrefix snakeCase
 
 
 mailgunDomain :: String
@@ -76,9 +89,12 @@ patchRedefinirSenhaR username = do
     runDB $ update usuarioid [UsuarioPassword =. hsenha]
     bemail <- return $ BS.pack $ T.unpack email
     bsenha <- return $ BS.pack $ novasenha
-    res <- liftIO $ createAndSendEmail bemail bsenha
-    sendStatusJSON ok200 (object ["resp" .= res])
-
+    res <- NHS.httpLBS
+        $ NHS.setRequestBodyJSON (EmailJSON email $ T.pack novasenha)
+        $ NHS.parseRequest_ "POST http://brunotcc.dreamhosters.com/wp-json/clinichead/v1/mandaremail1234"
+    --res <- liftIO $ createAndSendEmail bemail bsenha
+    --sendStatusJSON ok200 (object ["resp" .= (BS.unpack $ BSL.toStrict $ responseBody res)])
+    sendStatusJSON ok200 (decode $ responseBody res :: Maybe Object)
 
 data AltSenhaJSON = AltSenhaJSON {
     senhaPassword   :: Text,
