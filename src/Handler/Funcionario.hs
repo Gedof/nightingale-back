@@ -54,20 +54,20 @@ postAdminR = do
         funreqUsername      = "admin",
         funreqPassword      = "admin",
         funreqNome          = "Admin",
-        funreqCpf           = "32961555035",
-        funreqRg            = "123456789",
+        funreqCpf           = "97907176360",
+        funreqRg            = "479258211",
         funreqNasc          = (read "1993-06-09" :: Day),
         funreqCargo         = 1,
         funreqTelefone      = Just "",
         funreqCelular       = Just "",
-        funreqEmail         = "admin@admin.com",
-        funreqCep           = "12345678",
+        funreqEmail         = "brunoedconte@gmail.com",
+        funreqCep           = "11035110",
         funreqEstado        = "SP",
-        funreqCidade        = "Admin",
-        funreqBairro        = "Admin",
-        funreqLogradouro    = "Admin",
-        funreqNumero        = "44",
-        funreqComplemento   = Just ""
+        funreqCidade        = "Santos",
+        funreqBairro        = "Ponta da Praia",
+        funreqLogradouro    = "Rua Doutor Cyro de Athayde Carneiro",
+        funreqNumero        = "47",
+        funreqComplemento   = Just "Apt 31"
     }
     admin <- liftIO $ cleanFuncionario adminjson
     madminid <- runDB $ insertUnique admin
