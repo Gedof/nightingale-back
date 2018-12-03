@@ -58,8 +58,8 @@ postAdminR = do
         funreqRg            = "123456789",
         funreqNasc          = (read "1993-06-09" :: Day),
         funreqCargo         = 1,
-        funreqTelefone      = Nothing,
-        funreqCelular       = Nothing,
+        funreqTelefone      = Just "",
+        funreqCelular       = Just "",
         funreqEmail         = "admin@admin.com",
         funreqCep           = "12345678",
         funreqEstado        = "SP",
@@ -67,7 +67,7 @@ postAdminR = do
         funreqBairro        = "Admin",
         funreqLogradouro    = "Admin",
         funreqNumero        = "44",
-        funreqComplemento   = Nothing
+        funreqComplemento   = Just ""
     }
     admin <- liftIO $ cleanFuncionario adminjson
     madminid <- runDB $ insertUnique admin
