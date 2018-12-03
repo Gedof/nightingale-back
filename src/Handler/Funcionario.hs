@@ -11,6 +11,7 @@ import Data.Time
 import Handler.Validation
 import Handler.JSONTypes
 import Data.Text as T (pack,unpack,Text)
+import Text.Read (read)
 import Handler.Login
 --import Data.Hash.MD5
 
@@ -47,6 +48,35 @@ postFuncionarioR = do
     invalido = "Invalido" :: Text
     
     
+postAdminR :: Handler TypedContent
+postAdminR = do
+    adminjson <- return $ FunReqJSON {
+        funreqUsername      = "admin",
+        funreqPassword      = "admin",
+        funreqNome          = "Admin",
+        funreqCpf           = "32961555035",
+        funreqRg            = "123456789",
+        funreqNasc          = (read "1993-06-09" :: Day),
+        funreqCargo         = 1,
+        funreqTelefone      = Nothing,
+        funreqCelular       = Nothing,
+        funreqEmail         = "admin@admin.com",
+        funreqCep           = "12345678",
+        funreqEstado        = "SP",
+        funreqCidade        = "Admin",
+        funreqBairro        = "Admin",
+        funreqLogradouro    = "Admin",
+        funreqNumero        = "44",
+        funreqComplemento   = Nothing
+    }
+    admin <- liftIO $ cleanFuncionario adminjson
+    madminid <- runDB $ insertUnique admin
+    case madminid of
+        Just adminid -> sendStatusJSON created201 (object ["resp" .= adminid]) 
+        Nothing -> sendStatusJSON badRequest400 (object ["resp" .= ("Já existe"::Text)])
+    
+    
+    
 validateFunCad :: FunReqJSON -> Bool
 validateFunCad funjson = validFun && validEnds && validTel && validCar
     where
@@ -78,18 +108,18 @@ cleanFuncionario fun = do
     now <- getCurrentTime
     pass <- hashPassw $ funreqPassword fun
     return $ Usuario {
-        usuarioUsername     = funreqUsername fun,
+        usuarioUsername     = filterAlphaNumber $ funreqUsername fun,
         usuarioPassword     = pass,
-        usuarioNome         = cleanAlphabet $ funreqNome fun,
-        usuarioCpf          = cleanNumber $ funreqCpf fun,
+        usuarioNome         = funreqNome fun,
+        usuarioCpf          = filterNumber $ funreqCpf fun,
         usuarioRg           = cleanRg,
         usuarioNasc         = funreqNasc fun,
         usuarioTipo         = cleanTipo,
-        usuarioTelefone     = fmap cleanNumber $ funreqTelefone fun,
-        usuarioCelular      = fmap cleanNumber $ funreqCelular fun,
+        usuarioTelefone     = fmap filterNumber $ funreqTelefone fun,
+        usuarioCelular      = fmap filterNumber $ funreqCelular fun,
         usuarioEmail        = funreqEmail fun,
         usuarioPais         = "BR",
-        usuarioCep          = cleanNumber $ funreqCep fun,
+        usuarioCep          = filterNumber $ funreqCep fun,
         usuarioEstado       = funreqEstado fun,
         usuarioCidade       = funreqCidade fun,
         usuarioBairro       = funreqBairro fun,
@@ -100,9 +130,7 @@ cleanFuncionario fun = do
         usuarioLastUpdatedTimestamp     = now
     }
     where
-    cleanNumber x = filterNumber x
     cleanRg = rgFormat $ funreqRg fun
-    cleanAlphabet x = filterAlphabet x
     cleanTipo = case (funreqCargo fun) of
         1 -> "Admin"        :: Text
         2 -> "Secretaria"   :: Text
@@ -270,18 +298,18 @@ cleanAltFuncionario :: FunAltJSON -> Usuario -> IO Usuario
 cleanAltFuncionario fun usu = do
     now <- getCurrentTime
     return $ Usuario {
-        usuarioUsername     = usuarioUsername usu,
+        usuarioUsername     = filterAlphaNumber $ usuarioUsername usu,
         usuarioPassword     = usuarioPassword usu,
-        usuarioNome         = cleanAlphabet $ funaltNome fun,
-        usuarioCpf          = cleanNumber $ funaltCpf fun,
+        usuarioNome         = funaltNome fun,
+        usuarioCpf          = filterNumber $ funaltCpf fun,
         usuarioRg           = cleanRg,
         usuarioNasc         = funaltNasc fun,
         usuarioTipo         = cleanTipo,
-        usuarioTelefone     = fmap cleanNumber $ funaltTelefone fun,
-        usuarioCelular      = fmap cleanNumber $ funaltCelular fun,
+        usuarioTelefone     = fmap filterNumber $ funaltTelefone fun,
+        usuarioCelular      = fmap filterNumber $ funaltCelular fun,
         usuarioEmail        = funaltEmail fun,
         usuarioPais         = "BR",
-        usuarioCep          = cleanNumber $ funaltCep fun,
+        usuarioCep          = filterNumber $ funaltCep fun,
         usuarioEstado       = funaltEstado fun,
         usuarioCidade       = funaltCidade fun,
         usuarioBairro       = funaltBairro fun,
@@ -292,9 +320,7 @@ cleanAltFuncionario fun usu = do
         usuarioLastUpdatedTimestamp     = now
     }
     where
-    cleanNumber x = filterNumber x
     cleanRg = rgFormat $ funaltRg fun
-    cleanAlphabet x = filterAlphabet x
     cleanTipo = case (funaltCargo fun) of
         1 -> "Admin"        :: Text
         2 -> "Secretaria"   :: Text

@@ -38,6 +38,11 @@ filterAlphabet :: T.Text -> T.Text
 filterAlphabet s = T.pack $ filter (`elem` valid) $ T.unpack s
     where
     valid = ' ' : ['a'..'z']++['A'..'Z']
+    
+filterAlphaNumber :: T.Text -> T.Text
+filterAlphaNumber s = T.pack $ filter (`elem` valid) $ T.unpack s
+    where
+    valid = ' ' : '_' : ['a'..'z']++['A'..'Z']++['0'..'9']
  
     
 rgCheck :: T.Text -> Bool

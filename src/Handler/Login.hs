@@ -165,6 +165,9 @@ postLoginR = do
     mEusuario <- runDB $ getBy $ UniqueUserUsername lusrname
     case mEusuario of
         Just eusuario -> do
+            --mEmedico <- runDB $ getBy $ UniqueUserId $ entityKey eusuario
+            --mAtivo <- return $ medicoAtivo <$> (entityVal <$> mEmedico)
+            --isAtivo <- return $ maybeBool mAtivo
             bpssword <- return $ BSC.pack $ T.unpack lpssword
             hpssword <- return $ BSC.pack $ T.unpack $ usuarioPassword $ entityVal eusuario
             if (validatePassword hpssword bpssword) then do
@@ -191,6 +194,9 @@ postLoginR = do
         "Admin"         -> 1
         "Secretaria"    -> 2
         "Medico"        -> 3
+    --maybeBool (Just True) = True
+    --maybeBool (Just False) = False
+    --maybeBool Nothing = True
         
         
 
