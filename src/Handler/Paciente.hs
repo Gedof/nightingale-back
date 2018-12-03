@@ -84,15 +84,15 @@ cleanPaciente :: PacReqJSON -> IO Paciente
 cleanPaciente pac = do
     now <- getCurrentTime
     return $ Paciente {
-        pacienteNome        = cleanAlphabet $ pacreqNome pac,
-        pacienteCpf         = cleanNumber $ pacreqCpf pac,
+        pacienteNome        = pacreqNome pac,
+        pacienteCpf         = filterNumber $ pacreqCpf pac,
         pacienteRg          = cleanRg,
         pacienteNasc        = pacreqNasc pac,
-        pacienteTelefone    = fmap cleanNumber $ pacreqTelefone pac,
-        pacienteCelular     = fmap cleanNumber $ pacreqCelular pac,
+        pacienteTelefone    = fmap filterNumber $ pacreqTelefone pac,
+        pacienteCelular     = fmap filterNumber $ pacreqCelular pac,
         pacienteEmail       = pacreqEmail pac,
         pacientePais        = Just "BR",
-        pacienteCep         = fmap cleanNumber $ pacreqCep pac,
+        pacienteCep         = fmap filterNumber $ pacreqCep pac,
         pacienteEstado      = pacreqEstado pac,
         pacienteCidade      = pacreqCidade pac,
         pacienteBairro      = pacreqBairro pac,
@@ -103,9 +103,7 @@ cleanPaciente pac = do
         pacienteLastUpdatedTimestamp    = now
     }
     where
-    cleanNumber x = filterNumber x
     cleanRg = rgFormat $ pacreqRg pac
-    cleanAlphabet x = filterAlphabet x
 
 
 --GET PERFIL  
@@ -254,15 +252,15 @@ cleanAltPaciente :: PacReqJSON -> UTCTime -> IO Paciente
 cleanAltPaciente pac timestamp = do
     now <- getCurrentTime
     return $ Paciente {
-        pacienteNome        = cleanAlphabet $ pacreqNome pac,
-        pacienteCpf         = cleanNumber $ pacreqCpf pac,
+        pacienteNome        = pacreqNome pac,
+        pacienteCpf         = filterNumber $ pacreqCpf pac,
         pacienteRg          = cleanRg,
         pacienteNasc        = pacreqNasc pac,
-        pacienteTelefone    = fmap cleanNumber $ pacreqTelefone pac,
-        pacienteCelular     = fmap cleanNumber $ pacreqCelular pac,
+        pacienteTelefone    = fmap filterNumber $ pacreqTelefone pac,
+        pacienteCelular     = fmap filterNumber $ pacreqCelular pac,
         pacienteEmail       = pacreqEmail pac,
         pacientePais        = Just "BR",
-        pacienteCep         = fmap cleanNumber $ pacreqCep pac,
+        pacienteCep         = fmap filterNumber $ pacreqCep pac,
         pacienteEstado      = pacreqEstado pac,
         pacienteCidade      = pacreqCidade pac,
         pacienteBairro      = pacreqBairro pac,
@@ -273,9 +271,7 @@ cleanAltPaciente pac timestamp = do
         pacienteLastUpdatedTimestamp    = now
     }
     where
-    cleanNumber x = filterNumber x
     cleanRg = rgFormat $ pacreqRg pac
-    cleanAlphabet x = filterAlphabet x
     
 
 --Busca

@@ -97,18 +97,18 @@ cleanUsu usu = do
     now <- getCurrentTime
     pass <- hashPassw $ medreqPassword usu
     return $ Usuario {
-        usuarioUsername     = medreqUsername usu,
+        usuarioUsername     = filterAlphaNumber $ medreqUsername usu,
         usuarioPassword     = pass,
-        usuarioNome         = cleanAlphabet $ medreqNome usu,
-        usuarioCpf          = cleanNumber $ medreqCpf usu,
+        usuarioNome         = medreqNome usu,
+        usuarioCpf          = filterNumber $ medreqCpf usu,
         usuarioRg           = cleanRg,
         usuarioNasc         = medreqNasc usu,
         usuarioTipo         = "Medico",
-        usuarioTelefone     = fmap cleanNumber $ medreqTelefone usu,
-        usuarioCelular      = fmap cleanNumber $ medreqCelular usu,
+        usuarioTelefone     = fmap filterNumber $ medreqTelefone usu,
+        usuarioCelular      = fmap filterNumber $ medreqCelular usu,
         usuarioEmail        = medreqEmail usu,
         usuarioPais         = "BR",
-        usuarioCep          = cleanNumber $ medreqCep usu,
+        usuarioCep          = filterNumber $ medreqCep usu,
         usuarioEstado       = medreqEstado usu,
         usuarioCidade       = medreqCidade usu,
         usuarioBairro       = medreqBairro usu,
@@ -119,9 +119,7 @@ cleanUsu usu = do
         usuarioLastUpdatedTimestamp     = now
     }
     where
-    cleanNumber x = filterNumber x
     cleanRg = rgFormat $ medreqRg usu
-    cleanAlphabet x = filterAlphabet x
     --hashPass = pack $ md5s $ Str $ unpack $ medreqPassword usu
 
 cleanEspecMeds :: MedicoId -> [EspecializacaoId] -> IO [EspecMedico]
@@ -136,11 +134,9 @@ cleanMed :: UsuarioId -> Text -> Medico
 cleanMed usuarioid crm =
     Medico {
         medicoUserid    = usuarioid,
-        medicoCrm       = cleanNumber crm,
+        medicoCrm       = filterNumber crm,
         medicoAtivo     = True
     }
-    where
-    cleanNumber x = filterNumber x
     
 
 
@@ -351,16 +347,16 @@ cleanAltUsu usujson usu = do
     return $ Usuario {
         usuarioUsername     = usuarioUsername usu,
         usuarioPassword     = usuarioPassword usu,
-        usuarioNome         = cleanAlphabet $ medaltNome usujson,
-        usuarioCpf          = cleanNumber $ medaltCpf usujson,
+        usuarioNome         = medaltNome usujson,
+        usuarioCpf          = filterNumber $ medaltCpf usujson,
         usuarioRg           = cleanRg,
         usuarioNasc         = medaltNasc usujson,
         usuarioTipo         = "Medico",
-        usuarioTelefone     = fmap cleanNumber $ medaltTelefone usujson,
-        usuarioCelular      = fmap cleanNumber $ medaltCelular usujson,
+        usuarioTelefone     = fmap filterNumber $ medaltTelefone usujson,
+        usuarioCelular      = fmap filterNumber $ medaltCelular usujson,
         usuarioEmail        = medaltEmail usujson,
         usuarioPais         = "BR",
-        usuarioCep          = cleanNumber $ medaltCep usujson,
+        usuarioCep          = filterNumber $ medaltCep usujson,
         usuarioEstado       = medaltEstado usujson,
         usuarioCidade       = medaltCidade usujson,
         usuarioBairro       = medaltBairro usujson,
@@ -371,9 +367,7 @@ cleanAltUsu usujson usu = do
         usuarioLastUpdatedTimestamp     = now
     }
     where
-    cleanNumber x = filterNumber x
     cleanRg = rgFormat $ medaltRg usujson
-    cleanAlphabet x = filterAlphabet x
     --hashPass = pack $ md5s $ Str $ unpack $ medreqPassword usu
     
     
@@ -381,11 +375,9 @@ cleanAltMed :: UsuarioId -> MedAltJSON -> Medico -> Medico
 cleanAltMed usuarioid medjson med =
     Medico {
         medicoUserid    = usuarioid,
-        medicoCrm       = cleanNumber $ medaltCrm medjson,
+        medicoCrm       = filterNumber $ medaltCrm medjson,
         medicoAtivo     = medicoAtivo med
     }
-    where
-    cleanNumber x = filterNumber x
     
 --Busca
 

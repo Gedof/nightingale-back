@@ -24,6 +24,7 @@ import Data.Aeson
 import Data.Aeson.Casing
 import Data.Text as T (pack,unpack,Text)
 import Data.Time.Clock.POSIX
+import Handler.Validation
 
 data LoginPost = LoginPost {
     loginpostUsername :: Text,
@@ -160,7 +161,7 @@ postLoginR :: Handler TypedContent
 postLoginR = do
     addHeader "ACCESS-CONTROL-ALLOW-ORIGIN" "*"
     loginjson <- requireJsonBody :: Handler LoginPost
-    lusrname <- return $ loginpostUsername loginjson
+    lusrname <- return $ filterAlphaNumber $ loginpostUsername loginjson
     lpssword <- return $ loginpostPassword loginjson
     mEusuario <- runDB $ getBy $ UniqueUserUsername lusrname
     case mEusuario of
